@@ -1,42 +1,47 @@
 import requests
 
 from flask import Flask, render_template, request, flash, url_for, redirect
+from flask_migrate import Migrate
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
 
 from breakfast_tales.parsers import get_rss
 from breakfast_tales.parsers import parse_rss
-from breakfast_tales.db import get_feed_from_db
-from breakfast_tales.db import get_articles_from_feed
-from breakfast_tales.db import get_article_by_id
-
+from breakfast_tales.models import db, Article, Feed
+from breakfast_tales.telegram import parse_channel
 
 # flask init
 app = Flask(__name__)
 app.secret_key = 'SECRET_KEY'
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///base.db"
+
+# db init
+
+db.init_app(app)
+migrate = Migrate(app, db)
 
 
-@app.get('/')
+@app.route('/')
 def index():
-    # update_feeds()
-    id = '6056caef7a4c48679b2302282c456ca0'
-    feed = get_feed_from_db(id)
-    articles = get_articles_from_feed(id, 10)
+    with app.app_context():
+        db.create_all()
+        update_feeds()
+        feeds = Feed.query.all()
 
-    return render_template(
-        'feed.html',
-        title='Breakfast Tales',
-        feed=feed,
-        articles=articles
-    )
+        return render_template(
+            'feed.html',
+            title='Breakfast Tales',
+            feeds=feeds
+        )
+
 
 
 @app.route('/description/<id>', methods=['GET'])
 def get_description(id):
-    article = get_article_by_id(id)
-    result = '<p><img src="' + article["thumbnail"] + '" class="img-fluid d-block"></p>'
-    result += f'<p>{article["description"]}</p>'
-    result += f'<p><a target="_blank" href="{article["url"]}">Перейти на сайт...</a></p>'
+    article = Article.get_article_by_id(id)
+    result = '<p><img src="' + article.thumbnail + '" class="img-fluid d-block"></p>'
+    result += f'<p>{article.description}</p>'
+    result += f'<p><a target="_blank" href="{article.url}">Перейти на сайт...</a></p>'
     return result
 
 
