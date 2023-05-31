@@ -3,15 +3,18 @@
 {% block content%}
     <div class="container-lg mt-3">
         <div class="row">
-            <h1 class="display-3">{{feed['title']}}</h1>
-            <div class="col-12 col-md-6 mx-auto border rounded-3 bg-light p-5">
-                {% for article in articles %}
-                    <p class="lead"><a href="{{article['url']}}" hx-get="/description/{{article['id']}}" hx-swap="innerHTML show:top" hx-target="#output">{{article['title']}}</a></p>
+            {% for feed in feeds %}
+                <h1 class="display-3">{{feed.title}}</h1>
+                <div class="col-12 col-md-6 mx-auto border rounded-3 bg-light p-5">
+                {% for article in feed.articles %}
+                    <p class="lead"><a href="{{article.url}}" hx-get="/description/{{article.id}}" hx-swap="innerHTML show:top" hx-target="#output{{feed.id}}">{{article.title}}</a></p>
                 {% endfor %}
-            </div>
+                </div>
+            
             <div class="col-12 col-md-6 mx-auto border rounded-3 bg-light p-5">
-                <div id="output"></div>
+                <div id="output{{feed.id}}"></div>
             </div>
+            {% endfor %}
         </div>
     </div>
 {% endblock%}
