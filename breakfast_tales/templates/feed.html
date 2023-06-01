@@ -1,20 +1,39 @@
 {% extends 'main.html' %}
 
 {% block content%}
-    <div class="container-lg mt-3">
-        <div class="row">
-            {% for feed in feeds %}
-                <h1 class="display-3">{{feed.title}}</h1>
-                <div class="col-12 col-md-6 mx-auto border rounded-3 bg-light p-5">
-                {% for article in feed.articles %}
-                    <p class="lead"><a href="{{article.url}}" hx-get="/description/{{article.id}}" hx-swap="innerHTML show:top" hx-target="#output{{feed.id}}">{{article.title}}</a></p>
+<div class="container-fluid mt-0 pl-0">
+    <div class="row">
+      <div class="col-3 px-0">
+        <!-- Блок фидов -->
+        <div class="bg-dark text-white p-3" style="height: 100vh;">
+            <ul class="list-group">
+                {% for feed in feeds %}
+                    <li class="list-group-item bg-dark text-white">{{feed.title}}</li>
                 {% endfor %}
-                </div>
-            
-            <div class="col-12 col-md-6 mx-auto border rounded-3 bg-light p-5">
-                <div id="output{{feed.id}}"></div>
-            </div>
-            {% endfor %}
+            </ul>
+          </div>
         </div>
+        <div class="col-4 mt-2">
+          <!-- Блок статей -->
+          <div class="card border-0">
+            <div class="card-body">
+              <h5 class="card-title">{{selected_feed.title}}</h5>
+              <ul class="list-group">
+                {% for article in articles %}
+                    <li class="list-group-item border-0"><a href="{{article.url}}" hx-get="/description/{{article.id}}" hx-swap="innerHTML" hx-target="#output">{{article.title}}</a></li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="col-5 mt-4">
+          <!-- Блок выбранной статьи -->
+          <div class="card">
+            <div class="card-body">
+                <div id="output">Выберите статью...</div>
+            </div>
+          </div>
+      </div>
     </div>
+  </div>
 {% endblock%}

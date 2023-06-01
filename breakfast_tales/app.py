@@ -27,13 +27,16 @@ def index():
         db.create_all()
         update_feeds()
         feeds = Feed.query.all()
-
+        selected_feed = Feed.get_first_feed()
+        articles = Feed.get_articles_for_feed(selected_feed.id)
+        
         return render_template(
             'feed.html',
             title='Breakfast Tales',
-            feeds=feeds
+            selected_feed=selected_feed,
+            feeds=feeds,
+            articles=articles
         )
-
 
 
 @app.route('/description/<id>', methods=['GET'])
