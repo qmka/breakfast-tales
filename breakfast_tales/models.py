@@ -56,6 +56,14 @@ class Feed(db.Model):
     def get_feed_by_url(feed_url):
         return Feed.query.filter_by(feed_url=feed_url).first()
     
+    @staticmethod
+    def get_first_feed():
+        return Feed.query.first()
+    
+    @staticmethod
+    def get_articles_for_feed(feed_id):
+        return Article.query.filter_by(feed_id=feed_id).all()
+    
 
 class Article(db.Model):
     __tablename__ = 'articles'
