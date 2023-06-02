@@ -3,6 +3,7 @@ import feedparser
 from bs4 import BeautifulSoup
 from datetime import datetime
 
+from breakfast_tales.models import Board
 from breakfast_tales.models import Feed
 from breakfast_tales.models import Article
 
@@ -13,13 +14,14 @@ def get_rss(url):
     return feed
 
 
-def parse_rss(feed):
+def parse_rss(feed, board_title):
     # Добавляем фид
     new_feed = Feed.add_feed(
         feed.feed.title,
         feed.feed.subtitle,
         feed.feed.link,
-        feed.href
+        feed.href,
+        Board.get_board_by_title(board_title).id
     )
 
     # Добавляем статьи фида

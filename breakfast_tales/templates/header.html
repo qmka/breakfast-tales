@@ -1,0 +1,10 @@
+    <div class="container">
+      <span class="navbar-brand"><a href="/" class="text-white">Breakfast Tales</a></span>
+      <ul class="nav">
+        {% for board in boards %}
+        <li class="nav-item">
+          <a class="nav-link text-white" href="/{{board.slug}}">{{board.title}}</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
