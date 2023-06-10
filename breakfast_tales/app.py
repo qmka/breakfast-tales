@@ -1,4 +1,4 @@
-import requests
+# import requests
 
 from flask import Flask, render_template, request, flash, url_for, redirect
 from flask_migrate import Migrate
@@ -9,6 +9,12 @@ from breakfast_tales.parsers import get_rss
 from breakfast_tales.parsers import parse_rss
 from breakfast_tales.models import db, Article, Feed, Board
 from breakfast_tales.telegram import parse_channel
+
+# parsed data types
+FEED_TYPE = 'feed'
+NOT_FEED_TYPE = 'not feed'
+TG_TYPE = 'tg'
+
 
 BOARDS = [
     {
@@ -22,22 +28,28 @@ BOARDS = [
 FEEDS = [
     {
         'url': 'https://bolknote.ru/rss/',
-        'board': BOARDS[0]
+        'board': BOARDS[0],
+        'type': FEED_TYPE
     }, {
         'url': 'https://ilyabirman.ru/meanwhile/rss/',
-        'board': BOARDS[0]
+        'board': BOARDS[0],
+        'type': FEED_TYPE
     }, {
         'url': 'https://rationalnumbers.ru/rss/',
-        'board': BOARDS[1]
+        'board': BOARDS[1],
+        'type': FEED_TYPE
     }, {
         'url': 'https://alexandertokarev.ru/rss/',
-        'board': BOARDS[0]
+        'board': BOARDS[0],
+        'type': FEED_TYPE
     }, {
         'url': 'https://worldchess.com/news/rss/',
-        'board': BOARDS[1]
+        'board': BOARDS[1],
+        'type': FEED_TYPE
     }, {
         'url': 'https://vacations-on.com/rss/',
-        'board': BOARDS[1]
+        'board': BOARDS[1],
+        'type': FEED_TYPE
     }
 ]
 
@@ -134,6 +146,7 @@ def get_feed(board_slug, feed_slug):
 @app.route('/<board_slug>/<feed_slug>/<article_slug>', methods=['GET'])
 def get_article(board_slug, feed_slug, article_slug):
     article = Article.get_article_by_slug(article_slug)
+    Article.set_article_as_read(article)
     result = '<p><img src="' + article.thumbnail + '" class="img-fluid d-block"></p>'
     result += f'<p>{article.description}</p>'
     result += f'<p><a target="_blank" href="{article.url}">Перейти на сайт...</a></p>'
