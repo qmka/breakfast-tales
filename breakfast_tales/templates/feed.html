@@ -2,44 +2,56 @@
 
 {% block content %}
 <div class="container-fluid mt-0 pl-0">
-    <div class="row">
-      <div class="col-3 px-0">
-        <!-- Блок фидов -->
-        <div class="bg-dark text-white p-3" style="height: 100vh;">
-            <ul class="list-group">
-                {% for feed in feeds %}
-                    <li class="list-group-item bg-dark text-white lead"><a href="/{{selected_board.slug}}/{{feed.slug}}" class="text-white  text-decoration-none">{{feed.title}}</a></li>
-                {% endfor %}
-            </ul>
-          </div>
+  <div class="row d-flex">
+    <div class="col-3 px-0">
+      <!-- Блок фидов -->
+      <div class="bg-dark text-white p-3 h-100">
+        <ul class="list-group">
+          {% for feed in feeds %}
+          {% if feed.id == selected_feed.id %}
+          <li class="list-group-item bg-dark text-white lead"><a href="/{{selected_board.slug}}/{{feed.slug}}" class="text-primary text-decoration-none bg-white p-1">{{feed.title}}</a></li>
+          {% else %}
+          <li class="list-group-item bg-dark text-white lead"><a href="/{{selected_board.slug}}/{{feed.slug}}" class="text-white  text-decoration-none p-1">{{feed.title}}</a></li>
+          {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="col-4 mt-2">
+      <!-- Блок статей -->
+      <div class="card border-0 h-100">
+        <div class="card-body">
+          <ul class="list-group">
+            {% for article in articles %}
+            <li class="list-group-item border-0">
+              {% if article.is_read %}
+              <a href="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" class="article-link text-secondary text-decoration-none">{{article.title}}</a>
+              {% else %}
+              <a href="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" class="article-link text-primary text-decoration-none">{{article.title}}</a>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
         </div>
-        <div class="col-4 mt-2">
-          <!-- Блок статей -->
-          <div class="card border-0">
-            <div class="card-body">
-              <h2 class="card-title">{{selected_feed.title}}</h5>
-              <ul class="list-group">
-                {% for article in articles %}
-                  <li class="list-group-item border-0">
-                    {% if article.is_read %}
-                      <a href="{{article.url}}" hx-get="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" hx-swap="innerHTML" hx-target="#output" hx-trigger="click" class="article-link text-secondary text-decoration-none">{{article.title}}</a>
-                    {% else %}
-                      <a href="{{article.url}}" hx-get="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" hx-swap="innerHTML" hx-target="#output" hx-trigger="click" class="article-link text-primary text-decoration-none">{{article.title}}</a>
-                    {% endif %}
-                  </li>
-                {% endfor %}
-              </ul>
-            </div>
-          </div>
+      </div>
+    </div>
+    <div class="col-5 my-4">
+      <!-- Блок выбранной статьи -->
+      <div class="card h-100">
+        <div class="card-body">
+          {% if not is_article_selected %}
+          <h2 class="card-title">{{selected_feed.title}}</h2>
+          <p>{{selected_feed.subtitle}}</p>
+          <hr>
+          <div id="output">Выберите статью...</div>
+          {% else %}
+          <p><img src="{{selected_article.thumbnail}}" class="img-fluid d-block"></p>
+          <p>{{selected_article.description}}</p>
+          <p><a target="_blank" href="{{selected_article.url}}">Перейти на сайт...</a></p>
+          {% endif %}
         </div>
-        <div class="col-5 mt-4">
-          <!-- Блок выбранной статьи -->
-          <div class="card">
-            <div class="card-body">
-                <div id="output">Выберите статью...</div>
-            </div>
-          </div>
       </div>
     </div>
   </div>
+</div>
 {% endblock %}
