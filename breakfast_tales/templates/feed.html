@@ -46,6 +46,8 @@
           <div id="output">Выберите статью...</div>
           {% else %}
           <p><img src="{{selected_article.thumbnail}}" class="img-fluid d-block"></p>
+          <h3>{{selected_article.title}}</h3>
+          <hr>
           <p>{{selected_article.description}}</p>
           <p><a target="_blank" href="{{selected_article.url}}">Перейти на сайт...</a></p>
           {% endif %}
