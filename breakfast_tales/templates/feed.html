@@ -8,7 +8,7 @@
         <div class="bg-dark text-white p-3" style="height: 100vh;">
             <ul class="list-group">
                 {% for feed in feeds %}
-                    <li class="list-group-item bg-dark text-white"><a href="/{{selected_board.slug}}/{{feed.slug}}" class="text-white">{{feed.title}}</a></li>
+                    <li class="list-group-item bg-dark text-white lead"><a href="/{{selected_board.slug}}/{{feed.slug}}" class="text-white  text-decoration-none">{{feed.title}}</a></li>
                 {% endfor %}
             </ul>
           </div>
@@ -17,10 +17,16 @@
           <!-- Блок статей -->
           <div class="card border-0">
             <div class="card-body">
-              <h5 class="card-title">{{selected_feed.title}}</h5>
+              <h2 class="card-title">{{selected_feed.title}}</h5>
               <ul class="list-group">
                 {% for article in articles %}
-                    <li class="list-group-item border-0"><a href="{{article.url}}" hx-get="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" hx-swap="innerHTML" hx-target="#output">{{article.title}}</a></li>
+                  <li class="list-group-item border-0">
+                    {% if article.is_read %}
+                      <a href="{{article.url}}" hx-get="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" hx-swap="innerHTML" hx-target="#output" hx-trigger="click" class="article-link text-secondary text-decoration-none">{{article.title}}</a>
+                    {% else %}
+                      <a href="{{article.url}}" hx-get="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" hx-swap="innerHTML" hx-target="#output" hx-trigger="click" class="article-link text-primary text-decoration-none">{{article.title}}</a>
+                    {% endif %}
+                  </li>
                 {% endfor %}
               </ul>
             </div>

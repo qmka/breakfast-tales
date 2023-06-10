@@ -192,6 +192,15 @@ class Article(db.Model):
     def get_article_by_slug(article_slug):
         return Article.query.filter_by(slug=article_slug).first()
     
+    @staticmethod
+    def set_article_as_read(article):
+        # article = Article.query.get(article_slug)
+        if article:
+            article.is_read = True
+            db.session.commit()
+            return True
+        return False
+    
     
 def make_id():
     id = uuid.uuid4()
