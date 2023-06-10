@@ -1,4 +1,5 @@
 # import requests
+import yaml
 
 from flask import Flask, render_template, request, flash, url_for, redirect
 from flask_migrate import Migrate
@@ -10,48 +11,10 @@ from breakfast_tales.parsers import parse_rss
 from breakfast_tales.models import db, Article, Feed, Board
 from breakfast_tales.telegram import parse_channel
 
-# parsed data types
-FEED_TYPE = 'feed'
-NOT_FEED_TYPE = 'not feed'
-TG_TYPE = 'tg'
 
 
-BOARDS = [
-    {
-        'title': 'Люди',
-        'slug': 'people'
-    }, {
-        'title': 'Машины',
-        'slug': 'robots'
-    }
-]
-FEEDS = [
-    {
-        'url': 'https://bolknote.ru/rss/',
-        'board': BOARDS[0],
-        'type': FEED_TYPE
-    }, {
-        'url': 'https://ilyabirman.ru/meanwhile/rss/',
-        'board': BOARDS[0],
-        'type': FEED_TYPE
-    }, {
-        'url': 'https://rationalnumbers.ru/rss/',
-        'board': BOARDS[1],
-        'type': FEED_TYPE
-    }, {
-        'url': 'https://alexandertokarev.ru/rss/',
-        'board': BOARDS[0],
-        'type': FEED_TYPE
-    }, {
-        'url': 'https://worldchess.com/news/rss/',
-        'board': BOARDS[1],
-        'type': FEED_TYPE
-    }, {
-        'url': 'https://vacations-on.com/rss/',
-        'board': BOARDS[1],
-        'type': FEED_TYPE
-    }
-]
+
+
 
 # flask init
 app = Flask(__name__)
@@ -72,9 +35,8 @@ def index():
     with app.app_context():
         db.create_all()
 
-        # comment create_boards() and update_feeds() if you don't need to change db
-        create_boards()
-        update_feeds()
+        # comment update_db() if you don't need to change db
+        # update_db()
 
         boards = Board.query.all()
         selected_board = Board.get_first_board()
@@ -197,15 +159,16 @@ def get_article(board_slug, feed_slug, article_slug):
         )
 
 
-def update_feeds():
-    for feed in FEEDS:
-        raw_feed = get_rss(feed['url'])
-        parse_rss(raw_feed, feed['board']['title'])
-
-
-def create_boards():
-    for board in BOARDS:
+def update_db():
+    with open('boards.yml', 'r') as file:
+        data = yaml.safe_load(file)
+    boards = data['boards']
+    for board in boards:
         Board.add_board(board['title'], board['slug'])
+        for feed in board['feeds']:
+            raw_feed = get_rss(feed['url'])
+            parse_rss(raw_feed, board['title'])
+
 
 
 '''
