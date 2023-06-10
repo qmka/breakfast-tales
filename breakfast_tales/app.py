@@ -71,6 +71,8 @@ def index():
     
     with app.app_context():
         db.create_all()
+
+        # comment create_boards() and update_feeds() if you don't need to change db
         create_boards()
         update_feeds()
 
@@ -81,15 +83,19 @@ def index():
         selected_feed = Board.get_first_feed_for_board(selected_board.id)
 
         articles = Feed.get_articles_for_feed(selected_feed.id)
+        is_article_selected = False
+        selected_article = None
         
         return render_template(
             'feed.html',
             title='Breakfast Tales',
             selected_board=selected_board,
             selected_feed=selected_feed,
+            selected_article=selected_article,
             boards=boards,
             feeds=feeds,
-            articles=articles
+            articles=articles,
+            is_article_selected=is_article_selected
         )
 
 
@@ -106,15 +112,19 @@ def get_board(board_slug):
         selected_feed = Board.get_first_feed_for_board(selected_board.id)
 
         articles = Feed.get_articles_for_feed(selected_feed.id)
+        is_article_selected = False
+        selected_article = None
         
         return render_template(
             'feed.html',
             title='Breakfast Tales',
             selected_board=selected_board,
             selected_feed=selected_feed,
+            selected_article=selected_article,
             boards=boards,
             feeds=feeds,
-            articles=articles
+            articles=articles,
+            is_article_selected=is_article_selected
         )
 
 
@@ -131,26 +141,60 @@ def get_feed(board_slug, feed_slug):
         selected_feed = Feed.get_feed_by_slug(feed_slug)
 
         articles = Feed.get_articles_for_feed(selected_feed.id)
-        
+        is_article_selected = False
+        selected_article = None
+     
         return render_template(
             'feed.html',
             title='Breakfast Tales',
             selected_board=selected_board,
             selected_feed=selected_feed,
+            selected_article=selected_article,
             boards=boards,
             feeds=feeds,
-            articles=articles
+            articles=articles,
+            is_article_selected=is_article_selected
         )
 
 
-@app.route('/<board_slug>/<feed_slug>/<article_slug>', methods=['GET'])
+'''@app.route('/<board_slug>/<feed_slug>/<article_slug>', methods=['GET'])
 def get_article(board_slug, feed_slug, article_slug):
     article = Article.get_article_by_slug(article_slug)
     Article.set_article_as_read(article)
     result = '<p><img src="' + article.thumbnail + '" class="img-fluid d-block"></p>'
     result += f'<p>{article.description}</p>'
     result += f'<p><a target="_blank" href="{article.url}">Перейти на сайт...</a></p>'
-    return result
+    return result'''
+
+@app.route('/<board_slug>/<feed_slug>/<article_slug>', methods=['GET'])
+def get_article(board_slug, feed_slug, article_slug):
+    if request.path == '/favicon.ico':
+        return app.send_static_file('favicon.ico')
+    
+    with app.app_context():
+        boards = Board.query.all()
+        selected_board = Board.get_board_by_slug(board_slug)
+
+        feeds = Board.get_feeds_for_board(selected_board.id)
+        selected_feed = Feed.get_feed_by_slug(feed_slug)
+
+        articles = Feed.get_articles_for_feed(selected_feed.id)
+        selected_article = Article.get_article_by_slug(article_slug)
+        is_article_selected = True
+
+        Article.set_article_as_read(selected_article)
+        
+        return render_template(
+            'feed.html',
+            title='Breakfast Tales',
+            selected_board=selected_board,
+            selected_feed=selected_feed,
+            selected_article=selected_article,
+            boards=boards,
+            feeds=feeds,
+            articles=articles,
+            is_article_selected=is_article_selected
+        )
 
 
 def update_feeds():
