@@ -3,17 +3,12 @@ import yaml
 
 from flask import Flask, render_template, request, flash, url_for, redirect
 from flask_migrate import Migrate
-from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
 
 from breakfast_tales.parsers import get_rss
-from breakfast_tales.parsers import parse_rss
+from breakfast_tales.parsers import parse_rss, parse_tj
 from breakfast_tales.models import db, Article, Feed, Board
 from breakfast_tales.telegram import parse_channel
-
-
-
-
 
 
 # flask init
@@ -22,7 +17,6 @@ app.secret_key = 'SECRET_KEY'
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///base.db"
 
 # db init
-
 db.init_app(app)
 migrate = Migrate(app, db)
 
@@ -36,7 +30,7 @@ def index():
         db.create_all()
 
         # comment update_db() if you don't need to change db
-        # update_db()
+        update_db()
 
         boards = Board.query.all()
         selected_board = Board.get_first_board()
@@ -119,15 +113,6 @@ def get_feed(board_slug, feed_slug):
         )
 
 
-'''@app.route('/<board_slug>/<feed_slug>/<article_slug>', methods=['GET'])
-def get_article(board_slug, feed_slug, article_slug):
-    article = Article.get_article_by_slug(article_slug)
-    Article.set_article_as_read(article)
-    result = '<p><img src="' + article.thumbnail + '" class="img-fluid d-block"></p>'
-    result += f'<p>{article.description}</p>'
-    result += f'<p><a target="_blank" href="{article.url}">Перейти на сайт...</a></p>'
-    return result'''
-
 @app.route('/<board_slug>/<feed_slug>/<article_slug>', methods=['GET'])
 def get_article(board_slug, feed_slug, article_slug):
     if request.path == '/favicon.ico':
@@ -166,26 +151,14 @@ def update_db():
     for board in boards:
         Board.add_board(board['title'], board['slug'])
         for feed in board['feeds']:
-            raw_feed = get_rss(feed['url'])
-            parse_rss(raw_feed, board['title'])
+            if feed['type'] == 'RSS':
+                raw_feed = get_rss(feed['url'])
+                parse_rss(raw_feed, board['title'])
+            elif feed['type'] == 'TJ':
+                parse_tj(feed['url'], board['title'])
+    print('DB updated!')
 
 
-
-'''
-def download(url):
-    try:
-        headers = {'User-Agent': UserAgent().chrome}
-        timeout = 5
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=timeout)
-        response.raise_for_status()
-        return response.text
-
-    except requests.exceptions.RequestException as e:
-        return getattr(e.response, "status_code", 400)
-'''
 
 def get_thumbnail(html_code):
     soup = BeautifulSoup(html_code, 'html.parser')
@@ -195,5 +168,3 @@ def get_thumbnail(html_code):
         return src
     else:
         return ''
-    
-
