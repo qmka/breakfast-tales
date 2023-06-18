@@ -3,6 +3,7 @@ import yaml
 
 from flask import Flask, render_template, request, flash, url_for, redirect
 from flask_migrate import Migrate
+from functools import wraps
 from bs4 import BeautifulSoup
 
 from breakfast_tales.parsers import get_rss
@@ -20,11 +21,18 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 
+def favicon_route(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if request.path == '/favicon.ico':
+            return app.send_static_file('favicon.ico')
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 @app.route('/', methods=['GET'])
+@favicon_route
 def index():
-    if request.path == '/favicon.ico':
-        return app.send_static_file('favicon.ico')
-    
     with app.app_context():
         db.create_all()
         boards = Board.query.all()
@@ -51,11 +59,13 @@ def index():
 
 
 @app.route('/update', methods=['GET'])
+@favicon_route
 def update():
     return render_template('wait.html')
 
 
 @app.route('/fetch', methods=['GET'])
+@favicon_route
 def fetch_data():
     db.create_all()
     update_db()
@@ -63,10 +73,8 @@ def fetch_data():
 
 
 @app.route('/<board_slug>', methods=['GET'])
+@favicon_route
 def get_board(board_slug):
-    if request.path == '/favicon.ico':
-        return app.send_static_file('favicon.ico')
-    
     with app.app_context():
         boards = Board.query.all()
         selected_board = Board.get_board_by_slug(board_slug)
@@ -92,10 +100,8 @@ def get_board(board_slug):
 
 
 @app.route('/<board_slug>/<feed_slug>', methods=['GET'])
+@favicon_route
 def get_feed(board_slug, feed_slug):
-    if request.path == '/favicon.ico':
-        return app.send_static_file('favicon.ico')
-    
     with app.app_context():
         boards = Board.query.all()
         selected_board = Board.get_board_by_slug(board_slug)
@@ -121,10 +127,8 @@ def get_feed(board_slug, feed_slug):
 
 
 @app.route('/<board_slug>/<feed_slug>/<article_slug>', methods=['GET'])
+@favicon_route
 def get_article(board_slug, feed_slug, article_slug):
-    if request.path == '/favicon.ico':
-        return app.send_static_file('favicon.ico')
-    
     with app.app_context():
         boards = Board.query.all()
         selected_board = Board.get_board_by_slug(board_slug)
