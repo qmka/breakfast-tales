@@ -1,0 +1,10 @@
+{% extends 'main.html' %}
+
+{% block content %}
+<p>Please wait...</p>
+<script>
+    setTimeout(function() {
+        window.location.href = '{{ url_for("fetch_data") }}';
+    }, 1000);
+</script>
+{% endblock %}
