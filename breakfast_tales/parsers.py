@@ -2,14 +2,23 @@ import feedparser
 import requests
 import json
 import io
+import re
 
 from bs4 import BeautifulSoup
 from datetime import datetime
 from fake_useragent import UserAgent
+from newspaper import Article as NewspaperArticle, ArticleException
 
 from breakfast_tales.models import Board
 from breakfast_tales.models import Feed
 from breakfast_tales.models import Article
+
+TELEGRAM_CHANNEL_WEBVIEW_PREFIX = "https://t.me/s/"
+
+TELEGRAM_MESSAGE_CLASS = ".tgme_widget_message"
+TELEGRAM_MESSAGE_TEXT_CLASS = ".tgme_widget_message_text"
+TELEGRAM_MESSAGE_PHOTO_CLASS = ".tgme_widget_message_photo_wrap"
+TELEGRAM_MESSAGE_DATE_CLASS = ".tgme_widget_message_date"
 
 
 # Получить RSS с сайта
@@ -18,38 +27,66 @@ def get_rss(url):
     return feed
 
 
-def parse_rss(feed, board_title):
+def parse_rss(feed, feed_title, board_title):
     # Добавляем фид
     new_feed = Feed.add_feed(
-        feed.feed.title,
+        feed_title,
         feed.feed.subtitle,
         feed.feed.link,
         feed.href,
         Board.get_board_by_title(board_title).id
     )
 
+    '''for article in feed.entries:
+        article_url = article.link
+        article_description, article_thumbnail = load_and_parse_full_article_text_and_image(article_url)
+        Article.add_article(
+            article.title,
+            article_description,
+            article_url,
+            new_feed.id,
+            convert_to_datetime(article.published),
+            article_thumbnail
+        )'''
+
     # Добавляем статьи фида
     for entry in feed.entries:
         soup = BeautifulSoup(entry.description, "html.parser")
         description = soup.get_text()
+        thumbnail = get_thumbnail(entry)
         Article.add_article(
             entry.title,
             description,
             entry.link,
             new_feed.id,
             convert_to_datetime(entry.published),
-            get_thumbnail(entry.summary)
+            thumbnail
         )
 
 
-def get_thumbnail(html_code):
-    soup = BeautifulSoup(html_code, 'html.parser')
-    img_tag = soup.find('img')
-    if img_tag:
-        src = img_tag.get('src')
-        return src
-    else:
-        return ''
+def get_thumbnail(entry):
+    # Цель - найти первую попавшуюся большую картинку
+    # 1. Ищем в description
+    if '<img' in entry.description:
+        soup = BeautifulSoup(entry.description, 'html.parser')
+        img_tag = soup.find('img')
+        return img_tag.get('src')
+    # 2. Если этого нет в description, то ищем в content
+    if 'content' in entry:
+        # print(entry.content[0].value)
+        soup = BeautifulSoup(entry.content[0].value, 'html.parser')
+        img_tags = soup.find_all('img')
+
+        # Взяли все тэги img
+        # Ищем среди них нормальное изображение
+        # Нормальное изображение имеет размер более 10 Кб
+        for img_tag in img_tags:
+            # Скачиваем и анализируем изображение
+            img_src = img_tag.get('src')
+            if "data:" not in img_src and check_file_size(img_src):
+                return img_src
+    return ''
+
 
 
 def convert_to_datetime(str_date):
@@ -62,12 +99,11 @@ def convert_to_datetime_tj(str_date):
     return datetime.strptime(str_date, datetime_format)
 
 
-def parse_tj(url, board_title):
+def parse_tj(url, feed_title, board_title):
     tj = get_tj_json(url)
-    # title, subtitle, site_url, feed_url, board_id
 
     new_feed = Feed.add_feed(
-        tj['title'],
+        feed_title,
         tj['description'],
         url,
         url,
@@ -78,11 +114,10 @@ def parse_tj(url, board_title):
         article = card['article']
         article_url = f"{url[:-1]}{article['path']}"
         article_description = article['excerpt']
-        # article_description = make_tj_article_description(article_url)
         if not card['media']['backgroundImage']:
-            thumbnail_url = card['media']['image']['files']['original']['filepath']
+            article_thumbnail = card['media']['image']['files']['original']['filepath']
         else:
-            thumbnail_url = card['media']['backgroundImage']['files']['original']['filepath']
+            article_thumbnail = card['media']['backgroundImage']['files']['original']['filepath']
 
         Article.add_article(
             article['title'],
@@ -90,27 +125,8 @@ def parse_tj(url, board_title):
             article_url,
             new_feed.id,
             convert_to_datetime_tj(article['date_published']),
-            thumbnail_url
+            article_thumbnail
         )
-
-
-def make_tj_article_description(url):
-    raw_content = safe_download(url)
-
-    with open('example.html', 'a', encoding='utf-8') as f:
-        f.write(raw_content)
-
-    soup = BeautifulSoup(raw_content, "html.parser")
-
-    # Находим элемент с классом "article"
-    article_body = soup.find('main')
-    if article_body:
-        for element in article_body.find_all(recursive=False):
-            element.extract()
-        useful_text = article_body.get_text(separator='\n').strip()
-        return useful_text
-    else:
-        return None
 
 
 def get_tj_json(url):
@@ -170,3 +186,127 @@ def safe_download(url):
         html.write(chunk)
 
     return html.getvalue()
+
+
+def check_file_size(url):
+    try:
+        headers = {'User-Agent': UserAgent().chrome}
+        timeout = 5
+        response = requests.head(
+                url,
+                headers=headers,
+                timeout=timeout)
+        response.raise_for_status()
+        size = int(response.headers.get("content-length", 0))
+
+        if size > 10 * 1024:  # 10 KB
+            return True
+        else:
+            return False
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Error occurred while retrieving file size: {e}")
+        return False
+
+
+def load_and_parse_full_article_text_and_image(url):
+    article = NewspaperArticle(url)
+    article.set_html(safe_download(url))
+    article.parse()
+    article.nlp()
+    return article.summary, article.top_image
+
+
+def parse_telegram(url, channel_name, board_title, limit=100):
+    web_url = transform_telegram_url_to_web_url(url)
+    raw_content = download(web_url)
+
+    with open('example.html', 'a', encoding='utf-8') as f:
+        f.write(raw_content)
+    
+    soup = BeautifulSoup(raw_content, features="lxml")
+
+    new_feed = Feed.add_feed(
+        channel_name,
+        '',
+        url,
+        url,
+        Board.get_board_by_title(board_title).id
+    )
+
+    message_tags = soup.select(TELEGRAM_MESSAGE_CLASS)
+    counter = 1
+    for message_tag in message_tags:
+        message_html = message_tag.prettify()
+        '''with open(f'example{counter}.html', 'a', encoding='utf-8') as f:
+            f.write(html)'''
+
+        message_text = None
+        message_text_tag = message_tag.select(TELEGRAM_MESSAGE_TEXT_CLASS)
+        if message_text_tag:
+            message_text = message_text_tag[0].decode_contents()
+            message_title = get_first_sentence(message_text) or 'Без названия'
+
+        message_photo = extract_background_image_url(message_html)
+
+        message_url = None
+        message_time = datetime.utcnow()
+        message_date_tag = message_tag.select(TELEGRAM_MESSAGE_DATE_CLASS)
+        if message_date_tag:
+            message_url = message_date_tag[0]["href"]
+            message_datetime_tag = message_date_tag[0].select("time")
+            if message_datetime_tag:
+                message_time = datetime.strptime(message_datetime_tag[0]["datetime"][:19], "%Y-%m-%dT%H:%M:%S")
+
+        Article.add_article(
+            message_title,
+            message_text,
+            message_url,
+            new_feed.id,
+            message_time,
+            message_photo
+        )
+
+        counter += 1
+        if counter > limit:
+            break
+
+
+def transform_telegram_url_to_web_url(url):
+    channel_name = url.split("/")[-1]
+    transformed_url = "https://t.me/s/" + channel_name + "/"
+    return transformed_url
+
+
+def extract_background_image_url(html):
+    pattern = r"background-image:url\('(.+?)'\)"
+    match = re.search(pattern, html)
+    if match:
+        return match.group(1)
+    else:
+        return ''
+
+
+'''def get_first_sentence(text):
+    if not text:
+        return None
+    if '.' in text:
+        return text.split('.', 1)[0]
+    else:
+        return text'''
+
+
+def get_first_sentence(html):
+    html = re.sub(r'<br\s*/?>|<hr\s*/?>', '.', html)
+    soup = BeautifulSoup(html, 'html.parser')
+    text = soup.get_text(separator=' ')
+    cleaned_text = re.sub(r'<.*?>', '', text)
+    sentence_delimiters = ['.', '?', '!']
+    first_sentence = cleaned_text
+    for delimiter in sentence_delimiters:
+        if delimiter in cleaned_text:
+            first_sentence = cleaned_text.split(delimiter, 1)[0] + delimiter
+            break
+    first_sentence = first_sentence.rstrip('.').rstrip()
+
+    return first_sentence.strip()

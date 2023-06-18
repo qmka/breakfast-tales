@@ -125,8 +125,12 @@ class Feed(db.Model):
         return Feed.query.first()
     
     @staticmethod
-    def get_articles_for_feed(feed_id):
-        return Article.query.filter_by(feed_id=feed_id).all()
+    def get_articles_for_feed(feed_id, limit=None):
+        query = Article.query.filter_by(feed_id=feed_id).order_by(Article.published.desc())
+        if limit is not None:
+            query = query.limit(limit)
+        articles = query.all()
+        return articles
     
 
 class Article(db.Model):
