@@ -25,9 +25,9 @@
             {% for article in articles %}
             <li class="list-group-item border-0">
               {% if article.is_read %}
-              <a href="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" class="article-link text-secondary text-decoration-none">{{article.title}}</a>
+              <a href="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" class="article-link text-secondary text-decoration-none">{{article.title}}</a><div class="time">{{article.published.strftime('%d.%m %H:%M')}}</div>
               {% else %}
-              <a href="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" class="article-link text-primary text-decoration-none">{{article.title}}</a>
+              <a href="/{{selected_board.slug}}/{{selected_feed.slug}}/{{article.slug}}" class="article-link text-primary text-decoration-none">{{article.title}}</a><div class="time">{{article.published.strftime('%d.%m %H:%M')}}</div>
               {% endif %}
             </li>
             {% endfor %}
