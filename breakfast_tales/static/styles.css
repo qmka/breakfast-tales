@@ -11,3 +11,8 @@ flex: 1;
 .footer {
 flex-shrink: 0;
 }
+
+.time {
+  font-size: 0.8rem;
+  color: grey;
+}
