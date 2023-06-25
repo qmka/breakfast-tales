@@ -20,6 +20,14 @@ TELEGRAM_MESSAGE_TEXT_CLASS = ".tgme_widget_message_text"
 TELEGRAM_MESSAGE_PHOTO_CLASS = ".tgme_widget_message_photo_wrap"
 TELEGRAM_MESSAGE_DATE_CLASS = ".tgme_widget_message_date"
 
+DATETIME_PATTERNS = [
+    '%Y-%m-%dT%H:%M:%S.%f',
+    '%Y-%m-%dT%H:%M:%S',
+    '%a, %d %b %Y %H:%M:%S %z'
+    '%a, %d %b %Y %H:%M:%S %Z',
+    '%d-%m-%y'
+]
+
 
 # Получить RSS с сайта
 def get_rss(url):
@@ -91,7 +99,14 @@ def get_thumbnail(entry):
                 return img_src
     return ''
 
-
+'''def convert_to_datetime(date_string):
+    for pattern in DATETIME_PATTERNS:
+        try:
+            datetime_object = datetime.strptime(date_string, pattern)
+            return datetime_object
+        except ValueError:
+            pass
+    return None'''
 
 def convert_to_datetime(date_string):
     datetime_format1 = '%a, %d %b %Y %H:%M:%S %z'
@@ -111,6 +126,45 @@ def convert_to_datetime(date_string):
 def convert_to_datetime_tj(str_date):
     datetime_format = '%d-%m-%y'
     return datetime.strptime(str_date, datetime_format)
+
+
+def convert_to_datetime_kanobu(str_date):
+    # "%Y-%m-%dT%H:%M:%S.%f"
+    datetime_format = '%Y-%m-%dT%H:%M:%S'
+    return datetime.strptime(str_date, datetime_format)
+
+
+def parse_kanobu(feed_url, site_url, feed_title, board_title):
+    # https://www.igromania.ru/api/v3/articles/?limit=20
+    # kanobu_data = get_kanobu_json(url)
+    kanobu_data = download_json(feed_url)
+
+    new_feed = Feed.add_feed(
+        feed_title,
+        '',
+        site_url,
+        feed_url,
+        Board.get_board_by_title(board_title).id
+    )
+
+    articles = kanobu_data['results']
+
+    for article in articles:
+        if 'desc' in article:
+            article_description = article['desc']
+        else:
+            article_description = ''
+
+        pubdate = truncate_string_by_dot(article['pubdate'])
+            
+        Article.add_article(
+            article['title'],
+            article_description,
+            f"{site_url}{article['slug']}",
+            new_feed.id,
+            convert_to_datetime_kanobu(pubdate),
+            article['pic']['origin'] or ''
+        )
 
 
 def parse_tj(url, feed_title, board_title):
@@ -141,6 +195,17 @@ def parse_tj(url, feed_title, board_title):
             convert_to_datetime_tj(article['date_published']),
             article_thumbnail
         )
+
+def get_kanobu_json(url):
+    raw_content = download(url)
+    soup = BeautifulSoup(raw_content, "html.parser")
+    hidden_json_content = soup.find('script', {'type': 'application/json', 'id': '__NEXT_DATA__'})
+    json_data = json.loads(hidden_json_content.string)
+
+    with open('example_json.json', 'a', encoding='utf-8') as f:
+        json.dump(json_data, f, ensure_ascii=False)
+    
+    return json_data
 
 
 def get_tj_json(url):
@@ -173,6 +238,22 @@ def download(url):
         response.raise_for_status()
         response.encoding = 'utf-8'
         return response.text
+
+    except requests.exceptions.RequestException as e:
+        return getattr(e.response, "status_code", 400)
+
+
+def download_json(url):
+    try:
+        headers = {'User-Agent': UserAgent().chrome}
+        timeout = 5
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=timeout)
+        response.raise_for_status()
+        response.encoding = 'utf-8'
+        return response.json()
 
     except requests.exceptions.RequestException as e:
         return getattr(e.response, "status_code", 400)
@@ -324,3 +405,12 @@ def get_first_sentence(html):
     first_sentence = first_sentence.rstrip('.').rstrip()
 
     return first_sentence.strip()
+
+
+def truncate_string_by_dot(input_string):
+    dot_index = input_string.find('.')
+    if dot_index != -1:
+        truncated_string = input_string[:dot_index]
+    else:
+        truncated_string = input_string
+    return truncated_string
