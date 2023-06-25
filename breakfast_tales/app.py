@@ -7,7 +7,7 @@ from functools import wraps
 from bs4 import BeautifulSoup
 
 from breakfast_tales.parsers import get_rss
-from breakfast_tales.parsers import parse_rss, parse_tj, parse_telegram
+from breakfast_tales.parsers import parse_rss, parse_tj, parse_telegram, parse_kanobu
 from breakfast_tales.models import db, Article, Feed, Board
 
 
@@ -70,6 +70,14 @@ def fetch_data():
     db.create_all()
     update_db()
     return redirect(url_for('index'))
+
+
+@app.route('/test', methods=['GET'])
+@favicon_route
+def test():
+    from breakfast_tales.parsers import get_kanobu_json
+    get_kanobu_json('https://www.igromania.ru/articles/')
+    return render_template('wait.html')
 
 
 @app.route('/<board_slug>', methods=['GET'])
@@ -170,4 +178,6 @@ def update_db():
                 parse_tj(feed['url'], feed['title'], board['title'])
             elif feed['type'] == 'Telegram':
                 parse_telegram(feed['url'], feed['title'], board['title'])
+            elif feed['type'] == 'Kanobu':
+                parse_kanobu(feed['url'], feed['site_url'], feed['title'], board['title'])
     print('DB updated!')
