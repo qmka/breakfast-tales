@@ -54,12 +54,16 @@ def parse_rss(feed, feed_title, board_title):
         soup = BeautifulSoup(entry.description, "html.parser")
         description = soup.get_text()
         thumbnail = get_thumbnail(entry)
+        if 'published' in entry:
+            published = convert_to_datetime(entry.published)
+        else:
+            published = datetime.now()
         Article.add_article(
             entry.title,
             description,
             entry.link,
             new_feed.id,
-            convert_to_datetime(entry.published),
+            published,
             thumbnail
         )
 
@@ -89,9 +93,19 @@ def get_thumbnail(entry):
 
 
 
-def convert_to_datetime(str_date):
-    datetime_format = '%a, %d %b %Y %H:%M:%S %z'
-    return datetime.strptime(str_date, datetime_format)
+def convert_to_datetime(date_string):
+    datetime_format1 = '%a, %d %b %Y %H:%M:%S %z'
+    datetime_format2 = '%a, %d %b %Y %H:%M:%S %Z'
+
+    try:
+        date = datetime.strptime(date_string, datetime_format1)
+    except ValueError:
+        try:
+            date = datetime.strptime(date_string, datetime_format2)
+        except ValueError:
+            raise ValueError("Неверный формат даты")
+    
+    return date
 
 
 def convert_to_datetime_tj(str_date):
